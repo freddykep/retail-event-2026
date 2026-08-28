@@ -10,6 +10,7 @@ import { CancelRegistrationButton } from "@/components/admin/CancelRegistrationB
 import { RetryWaitlistButton } from "@/components/admin/RetryWaitlistButton";
 import { ReassignWaitlistButton } from "@/components/admin/ReassignWaitlistButton";
 import { ManualWaitlistAssignRow } from "@/components/admin/ManualWaitlistAssignRow";
+import { DeleteParticipantButton } from "@/components/admin/DeleteParticipantButton";
 import { StatusPill } from "@/components/ui/StatusPill";
 
 const STATUS_LABEL: Record<string, string> = {
@@ -139,6 +140,10 @@ export default async function AdminParticipantsPage() {
                             <CancelRegistrationButton participantId={p.id} />
                           </>
                         )}
+                        <DeleteParticipantButton
+                          participantId={p.id}
+                          name={participantDisplayName(p)}
+                        />
                       </div>
                     </td>
                   </tr>

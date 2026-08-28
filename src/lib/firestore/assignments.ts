@@ -224,3 +224,7 @@ export async function listFinalAssignments(): Promise<AssignmentDoc[]> {
   const snap = await adminDb.collection(ASSIGNMENT_COLLECTION).get();
   return snap.docs.map((d) => d.data() as AssignmentDoc);
 }
+
+export async function removeFinalAssignment(participantId: string): Promise<void> {
+  await adminDb.collection(ASSIGNMENT_COLLECTION).doc(participantId).delete();
+}

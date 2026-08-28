@@ -103,6 +103,14 @@ export async function markParticipantsExported(participantIds: string[]): Promis
   }
 }
 
+/** Loescht einen Teilnehmer-Datensatz vollstaendig (inkl. Zugangscode). Reservierte
+ * Workshop-Kapazitaet sowie Registrierung/Warteliste/Zuteilung muessen VOR diesem
+ * Aufruf bereits ueber cancelRegistration()/removeDraftAssignment()/
+ * removeFinalAssignment() bereinigt worden sein (siehe deleteParticipantAction). */
+export async function deleteParticipant(participantId: string): Promise<void> {
+  await adminDb.collection(COLLECTION).doc(participantId).delete();
+}
+
 export async function updateRegistrationStatus(
   participantId: string,
   status: ParticipantDoc["registrationStatus"]

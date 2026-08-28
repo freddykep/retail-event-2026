@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/auth/guards";
 import { parseParticipantsCsv, type ParsedImport } from "@/lib/import/csv-parser";
 import {
+  deleteParticipant,
   existingEmails,
   importParticipants,
   regenerateAccessCode,
@@ -16,6 +17,7 @@ import {
   submitRegistration,
   type ReassignSummary,
 } from "@/lib/firestore/registrations";
+import { removeDraftAssignment, removeFinalAssignment } from "@/lib/firestore/assignments";
 import type { ParticipantImportRow } from "@/types/participant";
 
 export async function previewParticipantImport(csvContent: string): Promise<ParsedImport> {
@@ -90,4 +92,16 @@ export async function manuallyAssignWaitlistedAction(
   const result = await manuallyAssignFromWaitlist(participantId, workshopIds);
   if (!result.error) revalidatePath("/admin/participants");
   return result;
+}
+
+/** Loescht einen Teilnehmer vollstaendig (z.B. Test-Teilnehmer) - gibt zuerst eine
+ * evtl. reservierte Workshop-Kapazitaet frei und entfernt Registrierung, Warteliste,
+ * Entwurfs-/finale Zuteilung, bevor der Teilnehmer-Datensatz selbst geloescht wird. */
+export async function deleteParticipantAction(participantId: string): Promise<void> {
+  await requireAdmin();
+  await cancelRegistration(participantId);
+  await removeDraftAssignment(participantId);
+  await removeFinalAssignment(participantId);
+  await deleteParticipant(participantId);
+  revalidatePath("/admin/participants");
 }
