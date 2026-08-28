@@ -1,6 +1,7 @@
 import "server-only";
 import { adminDb } from "@/lib/firebase/admin";
 import { encryptAccessCode, generateAccessCode, hashAccessCode } from "@/lib/auth/access-code";
+import { chunk } from "@/lib/firestore/batch-utils";
 import type { ParticipantDoc, ParticipantImportRow } from "@/types/participant";
 
 const COLLECTION = "participants";
@@ -21,31 +22,34 @@ function fromSnap(id: string, data: FirebaseFirestore.DocumentData): Participant
 }
 
 /** Erzeugt Teilnehmer inkl. individuellem Zugangscode (Hash fuer Login, verschluesselt
- * fuer spaeteren XLSX-Export - siehe lib/auth/access-code.ts). */
+ * fuer spaeteren XLSX-Export - siehe lib/auth/access-code.ts). In 400er-Batches
+ * geschrieben, da ein Firestore-Batch maximal 500 Schreibvorgaenge erlaubt. */
 export async function importParticipants(rows: ParticipantImportRow[]): Promise<ParticipantDoc[]> {
   const now = Date.now();
-  const batch = adminDb.batch();
   const results: ParticipantDoc[] = [];
 
-  for (const row of rows) {
-    const ref = adminDb.collection(COLLECTION).doc();
-    const accessCode = generateAccessCode();
-    const data = {
-      firstName: row.firstName,
-      lastName: row.lastName,
-      email: row.email,
-      accessCodeHash: hashAccessCode(accessCode),
-      accessCodeEncrypted: encryptAccessCode(accessCode),
-      createdAt: now,
-      exported: false,
-      exportedAt: null,
-      registrationStatus: "imported",
-    };
-    batch.set(ref, data);
-    results.push(fromSnap(ref.id, data));
+  for (const rowsChunk of chunk(rows, 400)) {
+    const batch = adminDb.batch();
+    for (const row of rowsChunk) {
+      const ref = adminDb.collection(COLLECTION).doc();
+      const accessCode = generateAccessCode();
+      const data = {
+        firstName: row.firstName,
+        lastName: row.lastName,
+        email: row.email,
+        accessCodeHash: hashAccessCode(accessCode),
+        accessCodeEncrypted: encryptAccessCode(accessCode),
+        createdAt: now,
+        exported: false,
+        exportedAt: null,
+        registrationStatus: "imported",
+      };
+      batch.set(ref, data);
+      results.push(fromSnap(ref.id, data));
+    }
+    await batch.commit();
   }
 
-  await batch.commit();
   return results;
 }
 
