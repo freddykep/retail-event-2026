@@ -1,3 +1,5 @@
+import type { AllocationMode } from "@/types/assignment";
+
 export interface SelectableWorkshop {
   id: string;
   durationMinutes: 60 | 120;
@@ -68,24 +70,41 @@ export function isWorkshopDisabled(
  * garantierte Fast-Path (einzelner freier 2-Stunden-Workshop) braucht nur 1. Sind
  * ausschliesslich 2-Stunden-Workshops gewaehlt (voller Erstwunsch + Alternative(n)
  * zueinander), genuegt ein einziger weiterer 2-Stunden-Workshop (2 insgesamt) - hier
- * wird keine 3. Pflichtpraeferenz verlangt. Sobald mindestens ein 1-Stunden-Workshop
- * beteiligt ist (reiner 60er-Pfad oder voller 2-Stunden-Erstwunsch + 60+60-
- * Alternative), wird die 3. Praeferenz verpflichtend gemacht (nicht nur empfohlen) -
- * das reduziert das Risiko, bei der finalen Zuteilung komplett auf der Warteliste zu
- * landen (siehe README, Abschnitt "Zuteilungsalgorithmus"), auch wenn es dieses Risiko
- * bei knapper Gesamtkapazitaet nie vollstaendig ausschliessen kann. Ist die insgesamt
- * verfuegbare Anzahl an Workshops einer Dauer kleiner als gefordert, wird die
- * Anforderung entsprechend abgesenkt (nie mehr verlangen, als ueberhaupt waehlbar ist).
+ * wird keine 3. Pflichtpraeferenz verlangt.
+ *
+ * Sobald mindestens ein 1-Stunden-Workshop beteiligt ist, haengt die Anforderung vom
+ * Zuteilungsmodus ab:
+ * - "fair": die 3. Praeferenz ist verpflichtend (nicht nur empfohlen), weil die
+ *   spaetere score-basierte Stapelverarbeitung (siehe lib/allocation/allocate.ts) einen
+ *   bei Absenden noch freien Wunsch nachtraeglich an einen hoeher bewerteten, spaeteren
+ *   Teilnehmer verlieren kann - ohne Alternative landet man dann komplett auf der
+ *   Warteliste.
+ * - "strict-fcfs": sind GENAU zwei 1-Stunden-Workshops gewaehlt und haben BEIDE bei
+ *   Absenden noch freie Plaetze, reicht das - die Echtzeit-Buchung ist hier
+ *   deterministisch (reine Ankunftsreihenfolge, kein Score, kein nachtraeglicher
+ *   Ausgleich), die spaetere Stapelverarbeitung reproduziert exakt dasselbe Ergebnis.
+ *   Eine 3. Praeferenz ist nur noetig, wenn die Wunsch-Kombination selbst schon nicht
+ *   mehr frei ist (dann landet man auf der Warteliste und braucht eine Absicherung).
+ *
+ * Ist die insgesamt verfuegbare Anzahl an Workshops einer Dauer kleiner als gefordert,
+ * wird die Anforderung entsprechend abgesenkt (nie mehr verlangen, als ueberhaupt
+ * waehlbar ist).
  */
 function requiredCount(
   selected: SelectableWorkshop[],
-  workshopsById: Map<string, SelectableWorkshop>
+  workshopsById: Map<string, SelectableWorkshop>,
+  mode: AllocationMode
 ): number {
   const oneTwenty = selected.filter((w) => w.durationMinutes === 120).length;
 
   if (selected.every((w) => w.durationMinutes === 120)) {
     return Math.min(2, poolCount(workshopsById, 120));
   }
+
+  if (mode === "strict-fcfs" && selected.length === 2 && selected.every(hasRoom)) {
+    return 2;
+  }
+
   // Enthaelt mindestens einen 60min-Workshop (reiner 60er-Pfad oder voller
   // 2-Stunden-Erstwunsch + 60+60-Alternative): so viele 60min-Praeferenzen wie der
   // verbleibende Platz im 3er-Kontingent erlaubt (abzueglich eines evtl. 120min-
@@ -96,7 +115,8 @@ function requiredCount(
 /** Kann die aktuelle Auswahl abgesendet werden (gueltige Endkombination erreichbar)? */
 export function canSubmitSelection(
   selectedIds: string[],
-  workshopsById: Map<string, SelectableWorkshop>
+  workshopsById: Map<string, SelectableWorkshop>,
+  mode: AllocationMode = "fair"
 ): boolean {
   const selected = resolve(selectedIds, workshopsById);
   if (selected.length === 0) return false;
@@ -112,15 +132,16 @@ export function canSubmitSelection(
   // 120er-Alternativen zueinander (sixty === 0) duerfen beliebig viele sein.
   if (sixty > 0 && oneTwenty > 1) return false;
 
-  return selected.length >= requiredCount(selected, workshopsById);
+  return selected.length >= requiredCount(selected, workshopsById, mode);
 }
 
 /** Erklaerender Hinweistext, wenn die Auswahl noch nicht absendbar ist. */
 export function selectionHint(
   selectedIds: string[],
-  workshopsById: Map<string, SelectableWorkshop>
+  workshopsById: Map<string, SelectableWorkshop>,
+  mode: AllocationMode = "fair"
 ): string | null {
-  if (canSubmitSelection(selectedIds, workshopsById)) return null;
+  if (canSubmitSelection(selectedIds, workshopsById, mode)) return null;
   const selected = resolve(selectedIds, workshopsById);
 
   if (selected.length === 0) {
@@ -130,7 +151,7 @@ export function selectionHint(
     return "Dieser Workshop ist bereits ausgebucht. Bitte gib Alternativen an - weitere 2-Stunden-Workshops oder zwei 1-Stunden-Workshops.";
   }
 
-  const required = requiredCount(selected, workshopsById);
+  const required = requiredCount(selected, workshopsById, mode);
   const missing = required - selected.length;
   if (missing > 0) {
     return `Bitte wähle noch ${missing === 1 ? "eine weitere Präferenz" : `${missing} weitere Präferenzen`} als Absicherung, falls eine deiner Optionen nicht verfügbar ist.`;

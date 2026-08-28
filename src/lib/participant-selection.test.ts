@@ -112,3 +112,32 @@ describe("canSubmitSelection", () => {
     expect(canSubmitSelection(["A"], byId([A]))).toBe(false);
   });
 });
+
+describe("canSubmitSelection im strict-fcfs-Modus", () => {
+  it("verlangt KEINE 3. Praeferenz bei zwei 1-Stunden-Workshops mit freiem Platz, auch wenn ein 3. Workshop existieren wuerde", () => {
+    const A = w("A", 60, 10, 0);
+    const B = w("B", 60, 10, 0);
+    const C = w("C", 60, 10, 0);
+    const pool = byId([A, B, C]);
+    // Im "fair"-Modus (Default) waere hier eine 3. Praeferenz Pflicht (siehe Test oben).
+    expect(canSubmitSelection(["A", "B"], pool, "strict-fcfs")).toBe(true);
+  });
+
+  it("verlangt weiterhin eine 3. Praeferenz, wenn einer der beiden gewaehlten 1-Stunden-Workshops schon ausgebucht ist (Warteliste droht)", () => {
+    const A = w("A", 60, 10, 0);
+    const B = w("B", 60, 1, 1); // ausgebucht
+    const C = w("C", 60, 10, 0);
+    const pool = byId([A, B, C]);
+    expect(canSubmitSelection(["A", "B"], pool, "strict-fcfs")).toBe(false);
+    expect(canSubmitSelection(["A", "B", "C"], pool, "strict-fcfs")).toBe(true);
+  });
+
+  it("bleibt im 'fair'-Modus (Default) beim bisherigen Verhalten - 3. Praeferenz weiterhin Pflicht", () => {
+    const A = w("A", 60, 10, 0);
+    const B = w("B", 60, 10, 0);
+    const C = w("C", 60, 10, 0);
+    const pool = byId([A, B, C]);
+    expect(canSubmitSelection(["A", "B"], pool, "fair")).toBe(false);
+    expect(canSubmitSelection(["A", "B"], pool)).toBe(false);
+  });
+});

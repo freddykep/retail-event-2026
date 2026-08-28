@@ -39,6 +39,7 @@ export default async function WorkshopsPage() {
             workshops={workshops}
             participantName={participant.firstName}
             initialPreferences={registration?.preferences ?? []}
+            allocationMode={config.allocationMode}
           />
         )}
       </div>

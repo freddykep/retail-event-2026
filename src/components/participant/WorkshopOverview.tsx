@@ -3,6 +3,7 @@
 import { useActionState, useMemo, useState } from "react";
 import { effectiveCapacity, type WorkshopDoc } from "@/types/workshop";
 import { submitPreferences, type SubmitState } from "@/app/actions/registrations";
+import type { AllocationMode } from "@/types/assignment";
 import {
   canSubmitSelection,
   isWorkshopDisabled,
@@ -19,11 +20,17 @@ interface Props {
   workshops: WorkshopDoc[];
   participantName: string;
   initialPreferences: string[];
+  allocationMode: AllocationMode;
 }
 
 const initialState: SubmitState = {};
 
-export function WorkshopOverview({ workshops, participantName, initialPreferences }: Props) {
+export function WorkshopOverview({
+  workshops,
+  participantName,
+  initialPreferences,
+  allocationMode,
+}: Props) {
   const [selected, setSelected] = useState<string[]>(initialPreferences);
   const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
   const [state, formAction, pending] = useActionState(submitPreferences, initialState);
@@ -50,8 +57,8 @@ export function WorkshopOverview({ workshops, participantName, initialPreference
     });
   }
 
-  const canSubmit = canSubmitSelection(selected, selectableById);
-  const hint = selectionHint(selected, selectableById);
+  const canSubmit = canSubmitSelection(selected, selectableById, allocationMode);
+  const hint = selectionHint(selected, selectableById, allocationMode);
 
   if (state.success) {
     const reservedWorkshops = (state.workshopIds ?? [])
