@@ -33,17 +33,18 @@ function poolCount(workshopsById: Map<string, SelectableWorkshop>, durationMinut
  *   Teilnehmer muss noch Alternativen angeben (weitere 2-Stunden-Workshops ODER
  *   zwei 1-Stunden-Workshops).
  * - 1. Wahl ist ein 1-Stunden-Workshop -> 2-Stunden-Workshops deaktivieren.
- * - Sobald mindestens ein 1-Stunden-Workshop in der Auswahl ist -> alle noch nicht
- *   gewaehlten 2-Stunden-Workshops deaktivieren.
- * - Sind nur 2-Stunden-Workshops gewaehlt (>= 2, Alternativen zueinander) -> alle
- *   noch nicht gewaehlten 1-Stunden-Workshops deaktivieren.
+ * - Ab 2 Praeferenzen: ist die Auswahl gemaess requiredCount() (siehe dort, haengt vom
+ *   Zuteilungsmodus ab) bereits absendbar, wird alles Weitere deaktiviert - egal welcher
+ *   Dauer. Sonst bleiben passende Workshops derselben Dauer noch waehlbar (2-Stunden-
+ *   Workshops werden deaktiviert, sobald mindestens ein 1-Stunden-Workshop gewaehlt ist).
  * - Maximal 3 Praeferenzen insgesamt - danach wird der Rest deaktiviert.
  * - Bereits ausgewaehlte Kacheln werden nie deaktiviert (abwaehlbar).
  */
 export function isWorkshopDisabled(
   workshop: SelectableWorkshop,
   selectedIds: string[],
-  workshopsById: Map<string, SelectableWorkshop>
+  workshopsById: Map<string, SelectableWorkshop>,
+  mode: AllocationMode = "fair"
 ): boolean {
   if (selectedIds.includes(workshop.id)) return false;
   if (selectedIds.length === 0) return false;
@@ -59,6 +60,12 @@ export function isWorkshopDisabled(
     }
     return workshop.durationMinutes === 120; // 60er zuerst -> 120er ausblenden
   }
+
+  // Ab 2 Praeferenzen: sobald die Auswahl schon absendbar ist (z.B. zwei
+  // 1-Stunden-Workshops mit freiem Platz im strict-fcfs-Modus, siehe
+  // requiredCount), wird alles Weitere deaktiviert - unabhaengig von der Dauer.
+  // Deckungsgleich mit canSubmitSelection, damit UI und Absende-Logik nie auseinanderlaufen.
+  if (selected.length >= requiredCount(selected, workshopsById, mode)) return true;
 
   const sixtyCount = selected.filter((w) => w.durationMinutes === 60).length;
   if (sixtyCount > 0) return workshop.durationMinutes === 120;

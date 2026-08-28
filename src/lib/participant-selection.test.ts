@@ -61,6 +61,24 @@ describe("isWorkshopDisabled", () => {
     const map = byId([A, B, C, D]);
     expect(isWorkshopDisabled(D, ["A", "B", "C"], map)).toBe(true);
   });
+
+  it("im strict-fcfs-Modus: blendet einen 3. 1-Stunden-Workshop aus, sobald zwei mit freiem Platz gewaehlt sind", () => {
+    const A = w("A", 60, 10, 0);
+    const B = w("B", 60, 10, 0);
+    const C = w("C", 60, 10, 0);
+    const map = byId([A, B, C]);
+    // Im "fair"-Modus (Default) bliebe C waehlbar (3. Praeferenz weiterhin moeglich/noetig).
+    expect(isWorkshopDisabled(C, ["A", "B"], map)).toBe(false);
+    expect(isWorkshopDisabled(C, ["A", "B"], map, "strict-fcfs")).toBe(true);
+  });
+
+  it("im strict-fcfs-Modus: laesst einen 3. Workshop waehlbar, wenn einer der beiden gewaehlten schon ausgebucht ist", () => {
+    const A = w("A", 60, 10, 0);
+    const B = w("B", 60, 1, 1); // ausgebucht
+    const C = w("C", 60, 10, 0);
+    const map = byId([A, B, C]);
+    expect(isWorkshopDisabled(C, ["A", "B"], map, "strict-fcfs")).toBe(false);
+  });
 });
 
 describe("canSubmitSelection", () => {

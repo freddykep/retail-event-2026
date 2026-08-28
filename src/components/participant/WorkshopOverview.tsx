@@ -122,15 +122,17 @@ export function WorkshopOverview({
         </p>
         <p className="mt-1">
           Ist dein bevorzugter 2-Stunden-Workshop bereits ausgebucht, benötigst du mindestens eine
-          Alternative. Bitte gib nach Möglichkeit eine 3. Präferenz an - das schützt dich zusätzlich
-          davor, auf der Warteliste zu landen, falls eine deiner Optionen ausgebucht ist.
+          Alternative.{" "}
+          {allocationMode === "strict-fcfs"
+            ? "Haben deine beiden gewählten 1-Stunden-Workshops noch freie Plätze, reicht das aus. Nur wenn du dich irgendwo auf die Warteliste setzt, brauchst du eine 3. Präferenz als Absicherung, falls dieser Wartelistenplatz nicht frei wird."
+            : "Bitte gib bei zwei 1-Stunden-Workshops eine 3. Präferenz an - das schützt dich zusätzlich davor, bei der späteren Zuteilung auf der Warteliste zu landen."}
         </p>
       </div>
 
       <div className="flex flex-col gap-4">
         {workshops.map((w) => {
           const selectable = selectableById.get(w.id)!;
-          const disabled = isWorkshopDisabled(selectable, selected, selectableById);
+          const disabled = isWorkshopDisabled(selectable, selected, selectableById, allocationMode);
           const rank = selected.includes(w.id) ? selected.indexOf(w.id) + 1 : null;
           return (
             <WorkshopTile
