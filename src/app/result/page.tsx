@@ -7,6 +7,7 @@ import { getFinalAssignment } from "@/lib/firestore/assignments";
 import { getWorkshopsByIds } from "@/lib/firestore/workshops";
 import { getEventConfig } from "@/lib/firestore/event-config";
 import { ParticipantHeader } from "@/components/participant/ParticipantHeader";
+import { ReservedWorkshopTile } from "@/components/participant/ReservedWorkshopTile";
 import { Card } from "@/components/ui/Card";
 import { StatusPill } from "@/components/ui/StatusPill";
 
@@ -92,29 +93,30 @@ export default async function ResultPage() {
   if (!registration) redirect("/workshops");
 
   const waitlist = registration.status === "waitlisted" ? await getWaitlistEntry(participantId) : null;
+  const isWaitlisted = registration.status === "waitlisted";
   const workshops = await getWorkshopsByIds(
-    registration.status === "confirmed" ? registration.confirmedWorkshopIds : waitlist?.workshopIds ?? []
+    isWaitlisted ? (waitlist?.workshopIds ?? []) : registration.confirmedWorkshopIds
   );
-  const titles = workshops.map((w) => w.title).join(" + ");
 
   return (
     <ResultShell firstName={participant.firstName}>
-      <Card className="p-8 text-center">
-        <div className="mb-3 flex justify-center">
-          {registration.status === "confirmed" ? (
-            <StatusPill tone="info">Vorläufig reserviert</StatusPill>
-          ) : (
-            <StatusPill tone="warning">Warteliste</StatusPill>
-          )}
-        </div>
-        <h2 className="font-heading text-xl font-bold text-adesso-blue-4">{titles}</h2>
-        {registration.status === "waitlisted" && waitlist && (
-          <p className="mt-2 text-sm text-adesso-warmgrey">Position {waitlist.position}</p>
+      <div className="mb-4 flex justify-center">
+        {isWaitlisted ? (
+          <StatusPill tone="warning">
+            Warteliste{waitlist ? ` · Position ${waitlist.position}` : ""}
+          </StatusPill>
+        ) : (
+          <StatusPill tone="info">Vorläufig reserviert</StatusPill>
         )}
-        <p className="mt-4 text-xs text-adesso-warmgrey">
-          Die finale Zuteilung wird erst nach Ende der Anmeldephase veröffentlicht.
-        </p>
-      </Card>
+      </div>
+      <div className="flex flex-col gap-3">
+        {workshops.map((w) => (
+          <ReservedWorkshopTile key={w.id} workshop={w} waitlisted={isWaitlisted} />
+        ))}
+      </div>
+      <p className="mt-4 text-center text-xs text-adesso-warmgrey">
+        Die finale Zuteilung wird erst nach Ende der Anmeldephase veröffentlicht.
+      </p>
     </ResultShell>
   );
 }

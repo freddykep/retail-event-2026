@@ -1,10 +1,15 @@
 import { listParticipants } from "@/lib/firestore/participants";
 import { listRegistrations } from "@/lib/firestore/registrations";
 import { listWaitlistEntries } from "@/lib/firestore/waitlist";
+import { listWorkshops } from "@/lib/firestore/workshops";
 import { participantDisplayName } from "@/types/participant";
 import { ParticipantImportPanel } from "@/components/admin/ParticipantImportPanel";
 import { ExportPanel } from "@/components/admin/ExportPanel";
 import { RegenerateCodeButton } from "@/components/admin/RegenerateCodeButton";
+import { CancelRegistrationButton } from "@/components/admin/CancelRegistrationButton";
+import { RetryWaitlistButton } from "@/components/admin/RetryWaitlistButton";
+import { ReassignWaitlistButton } from "@/components/admin/ReassignWaitlistButton";
+import { ManualWaitlistAssignRow } from "@/components/admin/ManualWaitlistAssignRow";
 import { StatusPill } from "@/components/ui/StatusPill";
 
 const STATUS_LABEL: Record<string, string> = {
@@ -20,14 +25,16 @@ function initials(firstName: string, lastName: string): string {
 }
 
 export default async function AdminParticipantsPage() {
-  const [participants, registrations, waitlist] = await Promise.all([
+  const [participants, registrations, waitlist, workshops] = await Promise.all([
     listParticipants(),
     listRegistrations(),
     listWaitlistEntries(),
+    listWorkshops(),
   ]);
 
   const registrationsById = new Map(registrations.map((r) => [r.participantId, r]));
   const waitlistById = new Map(waitlist.map((w) => [w.participantId, w]));
+  const workshopsById = new Map(workshops.map((w) => [w.id, w]));
   const notExportedCount = participants.filter((p) => !p.exported).length;
 
   return (
@@ -40,13 +47,25 @@ export default async function AdminParticipantsPage() {
           href="/api/admin/export/results"
           className="text-sm font-semibold text-adesso-primary hover:underline"
         >
-          Ergebnis-Export (CSV)
+          Teilnehmer-Export (CSV) – Präferenzen, Warteliste & Zuteilung
         </a>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
         <ParticipantImportPanel />
         <ExportPanel notExportedCount={notExportedCount} />
+      </div>
+
+      <div className="flex flex-col gap-3 rounded-2xl border border-adesso-grey-light bg-white p-5 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h2 className="font-heading font-bold text-adesso-blue-4">Warteliste</h2>
+          <p className="text-sm text-adesso-warmgrey">
+            Nach einer Stornierung (z.B. krankheitsbedingter Ausfall) freigewordene Plätze
+            automatisch an wartende Teilnehmer vergeben. Bereits bestätigte Teilnehmer werden
+            dabei nie verändert.
+          </p>
+        </div>
+        <ReassignWaitlistButton />
       </div>
 
       <div className="overflow-hidden rounded-2xl border border-adesso-grey-light bg-white">
@@ -58,6 +77,7 @@ export default async function AdminParticipantsPage() {
                 <th className="p-3.5">E-Mail</th>
                 <th className="p-3.5">Exportiert</th>
                 <th className="p-3.5">Anmeldung</th>
+                <th className="p-3.5">Wartet auf</th>
                 <th className="p-3.5">Anmeldezeitpunkt</th>
                 <th className="p-3.5">Status</th>
                 <th className="p-3.5">Aktion</th>
@@ -67,6 +87,9 @@ export default async function AdminParticipantsPage() {
               {participants.map((p) => {
                 const reg = registrationsById.get(p.id);
                 const wl = waitlistById.get(p.id);
+                const waitingForTitles = wl?.workshopIds
+                  .map((id) => workshopsById.get(id)?.title ?? id)
+                  .join(" + ");
                 return (
                   <tr
                     key={p.id}
@@ -93,6 +116,9 @@ export default async function AdminParticipantsPage() {
                       {wl ? ` (Pos. ${wl.position})` : ""}
                     </td>
                     <td className="p-3.5 text-adesso-warmgrey">
+                      {wl ? waitingForTitles : "-"}
+                    </td>
+                    <td className="p-3.5 text-adesso-warmgrey">
                       {reg ? new Date(reg.submittedAt).toLocaleString("de-DE") : "-"}
                     </td>
                     <td className="p-3.5">
@@ -101,7 +127,19 @@ export default async function AdminParticipantsPage() {
                       </StatusPill>
                     </td>
                     <td className="p-3.5">
-                      <RegenerateCodeButton participantId={p.id} />
+                      <div className="flex flex-col items-start gap-1.5">
+                        <RegenerateCodeButton participantId={p.id} />
+                        {reg?.status === "confirmed" && (
+                          <CancelRegistrationButton participantId={p.id} />
+                        )}
+                        {reg?.status === "waitlisted" && (
+                          <>
+                            <RetryWaitlistButton participantId={p.id} />
+                            <ManualWaitlistAssignRow participantId={p.id} workshops={workshops} />
+                            <CancelRegistrationButton participantId={p.id} />
+                          </>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 );

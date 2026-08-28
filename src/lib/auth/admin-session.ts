@@ -5,7 +5,18 @@ import { adminAuth } from "@/lib/firebase/admin";
 const COOKIE_NAME = "admin_session";
 const SESSION_DURATION_MS = 1000 * 60 * 60 * 24 * 5; // 5 Tage
 
+export class NotAdminError extends Error {}
+
 export async function createAdminSessionCookie(idToken: string): Promise<void> {
+  // Muss VOR dem Erzeugen des Session-Cookies geprueft werden: createSessionCookie
+  // wuerde sonst fuer JEDEN gueltigen Firebase-Nutzer ein Cookie ausstellen (auch ohne
+  // Admin-Custom-Claim) - requireAdmin() wuerde das spaeter zwar korrekt ablehnen, aber
+  // nur mit einem stillen Redirect zurueck zum Login, ohne erklaerende Fehlermeldung.
+  const decoded = await adminAuth.verifyIdToken(idToken);
+  if (decoded.role !== "admin") {
+    throw new NotAdminError();
+  }
+
   const sessionCookie = await adminAuth.createSessionCookie(idToken, {
     expiresIn: SESSION_DURATION_MS,
   });

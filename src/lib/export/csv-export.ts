@@ -30,14 +30,21 @@ export function buildParticipantsExportCsv(data: {
     "Präferenz 1",
     "Präferenz 2",
     "Präferenz 3",
+    "Vorläufiger Status",
+    "Auf Warteliste",
+    "Wartelistenplatz",
     "Finale Zuteilung",
     "Session 1",
     "Session 2",
-    "Wartelistenstatus",
   ];
 
   const workshopTitle = (id: string | undefined | null) =>
     id ? (data.workshopsById.get(id)?.title ?? id) : "";
+
+  const PROVISIONAL_STATUS_LABEL: Record<RegistrationDoc["status"], string> = {
+    confirmed: "Vorläufig reserviert",
+    waitlisted: "Warteliste",
+  };
 
   const rows = data.participants.map((p) => {
     const reg = data.registrations.get(p.id);
@@ -55,10 +62,12 @@ export function buildParticipantsExportCsv(data: {
       workshopTitle(prefs[0]),
       workshopTitle(prefs[1]),
       workshopTitle(prefs[2]),
+      reg ? (PROVISIONAL_STATUS_LABEL[reg.status] ?? reg.status) : "",
+      waitlist ? "Ja" : "Nein",
+      waitlist ? String(waitlist.position) : "",
       finalTitles,
       workshopTitle(assignment?.session1WorkshopId),
       workshopTitle(assignment?.session2WorkshopId),
-      waitlist ? `Warteliste Position ${waitlist.position}` : "",
     ];
   });
 

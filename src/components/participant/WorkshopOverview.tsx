@@ -10,6 +10,7 @@ import {
   type SelectableWorkshop,
 } from "@/lib/participant-selection";
 import { WorkshopTile } from "@/components/participant/WorkshopTile";
+import { ReservedWorkshopTile } from "@/components/participant/ReservedWorkshopTile";
 import { Lightbox } from "@/components/participant/Lightbox";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
@@ -53,8 +54,13 @@ export function WorkshopOverview({ workshops, participantName, initialPreference
   const hint = selectionHint(selected, selectableById);
 
   if (state.success) {
+    const reservedWorkshops = (state.workshopIds ?? [])
+      .map((id) => workshopsById.get(id))
+      .filter((w): w is WorkshopDoc => Boolean(w));
+    const waitlisted = state.status === "waitlisted";
+
     return (
-      <div className="mx-auto max-w-lg">
+      <div className="mx-auto max-w-2xl">
         <Card className="bg-event-gradient overflow-hidden p-8 text-center text-white">
           <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-white/15">
             <svg viewBox="0 0 24 24" fill="none" className="h-7 w-7">
@@ -70,16 +76,25 @@ export function WorkshopOverview({ workshops, participantName, initialPreference
           <h2 className="font-heading mb-2 text-xl font-bold">Vielen Dank, {participantName}!</h2>
           <p className="text-white/90">Deine Workshop-Präferenzen wurden erfolgreich gespeichert.</p>
           <p className="mt-3 text-sm text-white/75">
-            {state.status === "confirmed"
-              ? "Dein bevorzugtes Workshop-Paket ist aktuell vorläufig für dich reserviert."
-              : "Deine Wunsch-Kombination ist aktuell ausgebucht - du stehst auf der Warteliste."}
+            {waitlisted
+              ? "Deine Wunsch-Kombination ist aktuell ausgebucht - du stehst auf der Warteliste."
+              : "Dein bevorzugtes Workshop-Paket ist aktuell vorläufig für dich reserviert."}
           </p>
-          <a href="/result" className="mt-6 inline-block">
-            <Button variant="secondary" className="border-white bg-white/10 text-white hover:bg-white/20">
-              Meine Anmeldung ansehen
-            </Button>
-          </a>
         </Card>
+
+        {reservedWorkshops.length > 0 && (
+          <div className="mt-5 flex flex-col gap-3">
+            {reservedWorkshops.map((w) => (
+              <ReservedWorkshopTile key={w.id} workshop={w} waitlisted={waitlisted} />
+            ))}
+          </div>
+        )}
+
+        <div className="mt-6 text-center">
+          <a href="/result" className="inline-block">
+            <Button variant="secondary">Meine Anmeldung ansehen</Button>
+          </a>
+        </div>
       </div>
     );
   }

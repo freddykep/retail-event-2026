@@ -30,11 +30,12 @@ export default async function AdminAllocationPage() {
     }
   }
 
+  const fullSessionWorkshops = workshops.filter((w) => w.durationMinutes === 120);
   const session1Workshops = workshops.filter(
-    (w) => w.durationMinutes === 120 || w.session === 1 || w.session === "both"
+    (w) => w.durationMinutes === 60 && (w.session === 1 || w.session === "both")
   );
   const session2Workshops = workshops.filter(
-    (w) => w.durationMinutes === 120 || w.session === 2 || w.session === "both"
+    (w) => w.durationMinutes === 60 && (w.session === 2 || w.session === "both")
   );
 
   return (
@@ -59,6 +60,10 @@ export default async function AdminAllocationPage() {
           </p>
         )}
       </div>
+
+      {fullSessionWorkshops.length > 0 && (
+        <FullSessionOverview workshops={fullSessionWorkshops} usage={usageBySlot} />
+      )}
 
       <div className="grid gap-6 lg:grid-cols-2">
         <SessionOverview title="Session 1" session={1} workshops={session1Workshops} usage={usageBySlot} />
@@ -154,6 +159,45 @@ export default async function AdminAllocationPage() {
           </ul>
         </div>
       )}
+    </div>
+  );
+}
+
+function FullSessionOverview({
+  workshops,
+  usage,
+}: {
+  workshops: Pick<WorkshopDoc, "id" | "title" | "capacity">[];
+  usage: Map<string, number>;
+}) {
+  return (
+    <div className="rounded-2xl border border-adesso-grey-light bg-white p-5">
+      <h2 className="font-heading mb-4 font-bold text-adesso-blue-4">
+        2-Stunden-Workshops (belegen beide Sessions)
+      </h2>
+      <ul className="grid gap-4 text-sm sm:grid-cols-2">
+        {workshops.map((w) => {
+          const used = usage.get(w.id) ?? 0;
+          const full = used >= w.capacity;
+          const pct = w.capacity > 0 ? Math.min(100, Math.round((used / w.capacity) * 100)) : 0;
+          return (
+            <li key={w.id}>
+              <div className="mb-1.5 flex items-center justify-between">
+                <span className="text-adesso-blue-4">{w.title}</span>
+                <StatusPill tone={full ? "danger" : "info"}>
+                  {used} / {w.capacity}
+                </StatusPill>
+              </div>
+              <div className="h-1.5 w-full overflow-hidden rounded-full bg-adesso-grey-lighter">
+                <div
+                  className={`h-full rounded-full ${full ? "bg-adesso-error" : "bg-adesso-primary"}`}
+                  style={{ width: `${pct}%` }}
+                />
+              </div>
+            </li>
+          );
+        })}
+      </ul>
     </div>
   );
 }

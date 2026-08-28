@@ -10,6 +10,7 @@ export interface SubmitState {
   error?: string;
   success?: boolean;
   status?: "confirmed" | "waitlisted";
+  workshopIds?: string[];
 }
 
 export async function submitPreferences(
@@ -35,7 +36,7 @@ export async function submitPreferences(
     const result = await submitRegistration(participantId, parsed.data);
     revalidatePath("/workshops");
     revalidatePath("/result");
-    return { success: true, status: result.status };
+    return { success: true, status: result.status, workshopIds: result.workshopIds };
   } catch (err) {
     return { error: err instanceof Error ? err.message : "Unbekannter Fehler." };
   }
