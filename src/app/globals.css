@@ -1,0 +1,106 @@
+@import "tailwindcss";
+
+:root {
+  --background: #ffffff;
+  --foreground: #062d47;
+
+  /* adesso corporate palette (recherchiert von adesso.de) */
+  --color-adesso-primary: #006ec7;
+  --color-adesso-blue-2: #005c9e;
+  --color-adesso-blue-3: #003d69;
+  --color-adesso-blue-4: #062d47;
+  --color-adesso-mustard: #c8b600;
+  --color-adesso-grey: #dcd9d7;
+  --color-adesso-grey-light: #e8e4e1;
+  --color-adesso-grey-lighter: #f3f2f1;
+  --color-adesso-warmgrey: #887d75;
+  --color-adesso-success: #52af00;
+  --color-adesso-error: #b20000;
+
+  /* Event-Akzent (aus dem "Team Retail"-Eventlogo entnommen) - fuer Highlights,
+     Farbverlaeufe und Statusakzente, harmonisch mit dem adesso-Blau kombiniert. */
+  --color-event-mint: #37dcb1;
+  --color-event-teal: #22aaba;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+
+  --color-adesso-primary: var(--color-adesso-primary);
+  --color-adesso-blue-2: var(--color-adesso-blue-2);
+  --color-adesso-blue-3: var(--color-adesso-blue-3);
+  --color-adesso-blue-4: var(--color-adesso-blue-4);
+  --color-adesso-mustard: var(--color-adesso-mustard);
+  --color-adesso-grey: var(--color-adesso-grey);
+  --color-adesso-grey-light: var(--color-adesso-grey-light);
+  --color-adesso-grey-lighter: var(--color-adesso-grey-lighter);
+  --color-adesso-warmgrey: var(--color-adesso-warmgrey);
+  --color-adesso-success: var(--color-adesso-success);
+  --color-adesso-error: var(--color-adesso-error);
+  --color-event-mint: var(--color-event-mint);
+  --color-event-teal: var(--color-event-teal);
+
+  --font-sans: var(--font-body);
+  --font-heading: var(--font-heading);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-body), Helvetica, Arial, sans-serif;
+}
+
+h1, h2, h3, h4, .font-heading {
+  font-family: var(--font-heading), Helvetica, Arial, sans-serif;
+}
+
+/* Signatur-Verlauf, angelehnt an das Event-Logo (Blau -> Mint, diagonal). Die duenne
+   Streifentextur ist als zweite (oberste) background-image-Ebene mit eingerechnet, da
+   `background-image` sich zwischen Klassen sonst gegenseitig ueberschreibt statt zu
+   stapeln - .bg-stripe-texture ist deshalb NICHT separat mit .bg-event-gradient
+   kombinierbar, sondern hier fest integriert. */
+.bg-event-gradient {
+  background-image:
+    repeating-linear-gradient(
+      90deg,
+      rgba(255, 255, 255, 0.05) 0px,
+      rgba(255, 255, 255, 0.05) 1px,
+      transparent 1px,
+      transparent 10px
+    ),
+    linear-gradient(120deg, var(--color-adesso-blue-4) 0%, var(--color-adesso-primary) 55%, var(--color-event-teal) 100%);
+}
+
+.bg-event-gradient-radial {
+  background-image:
+    repeating-linear-gradient(
+      90deg,
+      rgba(255, 255, 255, 0.05) 0px,
+      rgba(255, 255, 255, 0.05) 1px,
+      transparent 1px,
+      transparent 10px
+    ),
+    radial-gradient(120% 180% at 0% 0%, rgba(55, 220, 177, 0.35) 0%, rgba(55, 220, 177, 0) 45%),
+    linear-gradient(120deg, var(--color-adesso-blue-4) 0%, var(--color-adesso-primary) 60%, var(--color-event-teal) 100%);
+}
+
+.text-gradient-mint {
+  background: linear-gradient(90deg, var(--color-adesso-primary), var(--color-event-mint));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.card-hover {
+  transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
+}
+.card-hover:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 24px -12px rgba(6, 45, 71, 0.25);
+}
+
+::selection {
+  background: var(--color-adesso-primary);
+  color: #fff;
+}

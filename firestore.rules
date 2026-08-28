@@ -1,0 +1,16 @@
+rules_version = '2';
+
+// Die Anwendung greift ausschliesslich serverseitig ueber das Firebase Admin SDK auf
+// Firestore zu (Next.js Server Components/Server Actions/Route Handler mit
+// service-account-Rechten, die diese Regeln umgehen). Das Client-SDK wird im Browser
+// nirgendwo fuer Firestore verwendet - nur fuer Firebase Authentication im
+// Admin-Login. Direkter Zugriff ueber das Client-SDK wird deshalb vollstaendig
+// verweigert; die eigentliche Autorisierung (Teilnehmer sieht nur eigene Daten,
+// Admin-Only-Routen) lebt im Next.js-Servercode (siehe lib/auth/guards.ts).
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
